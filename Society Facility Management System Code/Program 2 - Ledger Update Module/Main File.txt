@@ -1,0 +1,11 @@
+*&---------------------------------------------------------------------*
+*& Module Pool      YT017MP_CREATE_LEDG
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE YT017MP_CREATE_LEDG_TOP                 .    " Global Data
+
+  INCLUDE YT017MP_CREATE_LEDG_O01                 .  " PBO-Modules
+  INCLUDE YT017MP_CREATE_LEDG_I01                 .  " PAI-Modules
+  INCLUDE YT017MP_CREATE_LEDG_F01                 .  " FORM-Routines

@@ -1,0 +1,299 @@
+*&---------------------------------------------------------------------*
+*& Include          YT017MP_ADOBE_INVOICE_I01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Module  VALIDATE  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE validate INPUT.
+Data: lv_assignmentid type YT017_Assignment-assignmentid.
+
+Select SINGLE
+  assignmentId
+  from YT017_assignment
+  INTO lv_assignmentid
+  WHERE assignmentId = Gs_input-assignmentid.
+  if sy-subrc <> 0.
+    MESSAGE 'AssignmentId is not valid.' type 'E'.
+  ENDIF.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9001  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9001 INPUT.
+ CASE sy-ucomm.
+  WHEN 'BACK'.
+    LEAVE TO SCREEN 0.
+  WHEN 'EXIT'.
+    LEAVE PROGRAM.
+ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  GETDATA  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE getdata INPUT.
+
+  data: lv_docid type Yt017_ledger-doc_id.
+  Select SINGLE
+    doc_id
+  from Yt017_ledger
+  INTO lv_docid
+  where assignmentid = gs_input-assignmentid
+    and period = gs_input-period
+    and year_ = gs_input-year.
+
+  if lv_docid is NOT INITIAL.
+    MESSAGE 'Ledger Already Generated.' TYPE 'E'.
+  ENDIF.
+
+  Select
+    sc~assignmentid
+    sc~period
+    sc~year_
+    sc~serviceid
+    sc~consumption_Quantity
+    sm~name
+    sm~baseprice
+    sm~currency
+    sm~gst
+  FROM Yt017_servicecon as sc
+  INNER JOIN YT017_servicemst as sm on sm~serviceid = sc~serviceid
+  into TABLE gt_srvc_con_mst
+  where sc~assignmentid = gs_input-assignmentid
+    and sc~period = gs_input-period
+    and sc~year_ = gs_input-year.
+if sy-subrc <> 0.
+  message 'Data not found' type 'E'.
+endif.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  PROCESSDATA  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE processdata INPUT.
+  data: lv_idx type sy-tabix,
+        lv_amt type p,
+        lv_docidc(10) type c,
+        lv_docidn(10) type n,
+        lv_sno TYPE n.
+
+  SELECT SINGLE
+    max( doc_id )
+    FROM YT017_Ledger
+    into lv_docidc.
+  if sy-subrc = 0.
+    lv_docidn = lv_docidc.
+  ENDIF.
+
+  Loop at gt_srvc_con_mst into gs_srvc_con_mst.
+
+    "Amount Without GST
+    lv_amt = gs_srvc_con_mst-baseprice * gs_srvc_con_mst-consumption.
+
+    "Amount With GST
+    gs_ledger-amount = lv_amt * ( 100 + gs_srvc_con_mst-gst ) / 100.
+
+    gs_ledger-assignmentid = gs_srvc_con_mst-assignmentid.
+    gs_ledger-currency = gs_srvc_con_mst-currency.
+    gs_ledger-period = gs_srvc_con_mst-period.
+    gs_ledger-serviceid = gs_srvc_con_mst-serviceid.
+    gs_ledger-postingdate = sy-datum.
+    gs_ledger-year_ = gs_srvc_con_mst-year.
+    gs_ledger-shkzg = 'H'.
+    lv_docidn = lv_docidn + 1.
+    gs_ledger-doc_id = lv_docidn.
+
+    lv_sno = lv_sno + 1.
+    gs_bill-sno = lv_sno.
+    gs_bill-service_name = gs_srvc_con_mst-service_name.
+    gs_bill-amount = gs_ledger-amount.
+    gs_bill-currency = gs_ledger-currency.
+
+    modify YT017_Ledger from gs_ledger.
+    if sy-subrc <> 0.
+      MESSAGE 'Something went wrong while writing in ledger table.' type 'E'.
+    ENDIF.
+
+    gv_total = gv_total + gs_bill-amount.
+
+    append: gs_bill to gt_bill,
+            gs_ledger to gt_ledger.
+
+    clear: gs_ledger, gs_srvc_con_mst, lv_amt.
+
+  ENDLOOP.
+
+  if gt_bill is INITIAL.
+    MESSAGE 'Bill Data not found' TYPE 'E'.
+  ENDIF.
+
+  if gv_total is INITIAL.
+    MESSAGE 'Problem in calculating total amount' TYPE 'E'.
+  ENDIF.
+
+  MESSAGE 'Ledger balance calculated successfully' type 'S'.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  FORMDATA  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE formdata INPUT.
+
+data: lv_bill_no type string,
+      lv_bill_date type sy-datum,
+      lv_bill_due_date type sy-datum,
+      lv_day(2) type n,
+      lv_month type char3,
+      lv_period type string,
+      lv_flatno(4) type n,
+      lv_ownerid(10) type c,
+      lv_ownername(50) type c,
+      lv_appartmentid(5) type c,
+      lv_currency type YT017CRNCY.
+lv_bill_no = gs_input-assignmentid && gs_input-period && gs_input-year.
+lv_bill_date = sy-datum.
+lv_bill_due_date = lv_bill_date + 10.
+lv_currency = 'INR'.
+case gs_input-period.
+  when '01'.:
+    lv_month = 'JAN',
+    lv_day = '31'.
+  when '02'.
+    lv_month = 'FEB'.
+    lv_day = '28'.
+  when '03'.
+    lv_month = 'MAR'.
+    lv_day = '31'.
+  when '04'.
+    lv_month = 'APR'.
+    lv_day = '30'.
+  when '05'.
+    lv_month = 'MAY'.
+    lv_day = '31'.
+  when '06'.
+    lv_month = 'JUN'.
+    lv_day = '30'.
+  when '07'.
+    lv_month = 'JUL'.
+    lv_day = '31'.
+  when '08'.
+    lv_month = 'AUG'.
+    lv_day = '31'.
+  when '09'.
+    lv_month = 'SEP'.
+    lv_day = '30'.
+  when '10'.
+    lv_month = 'OCT'.
+    lv_day = '31'.
+  when '11'.
+    lv_month = 'NOV'.
+    lv_day = '30'.
+  when '12'.
+    lv_month = 'DEC'.
+    lv_day = '31'.
+ENDCASE.
+
+lv_period = ' 01 ' && lv_month && ' ' && gs_input-year && ' '
+            && lv_day && ' ' && lv_month && ' ' && gs_input-year.
+
+SELECT SINGLE
+  ap~flat_no
+  ow~name
+  as~APARTMENTID
+  as~ownerid
+  from YT017_Assignment as as
+  INNER JOIN YT017_Owner as ow on ow~ownerid = as~ownerid
+  INNER JOIN YT017_Apartment as ap on ap~apartmentid = as~apartmentid
+  into (lv_flatno, lv_ownername, lv_appartmentid, lv_ownerid)
+  WHERE as~assignmentid = gs_input-assignmentid.
+
+  if sy-subrc <> 0.
+    MESSAGE 'Flatno or Owner Name not found!' TYPE 'E'.
+  ENDIF.
+
+CALL FUNCTION 'HR_IN_CHG_INR_WRDS'
+  EXPORTING
+    amt_in_num               = gv_total
+  IMPORTING
+    AMT_IN_WORDS             = gv_total_words
+  EXCEPTIONS
+    DATA_TYPE_MISMATCH       = 1
+    OTHERS                   = 2
+          .
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+    MESSAGE 'Problem in convertin Amount in words' TYPE 'E'.
+  ENDIF.
+
+GS_OUT-nodialog = space.
+GS_OUT-preview = 'X'.
+
+  CALL FUNCTION 'FP_JOB_OPEN'
+    CHANGING
+      ie_outputparams       = GS_OUT
+    EXCEPTIONS
+      CANCEL                = 1
+      USAGE_ERROR           = 2
+      SYSTEM_ERROR          = 3
+      INTERNAL_ERROR        = 4
+      OTHERS                = 5
+            .
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
+
+
+
+CALL FUNCTION '/1BCDWB/SM00000274'
+  EXPORTING
+*   /1BCDWB/DOCPARAMS        =
+    iv_total_words           = gv_total_words
+    iv_total                 = gv_total
+    it_bill                  = gt_bill
+    iv_ownername             = lv_ownername
+    iv_period                = lv_period
+    iv_bill_due_date         = lv_bill_due_date
+    iv_flatno                = lv_flatno
+    iv_bill_date             = lv_bill_date
+    iv_currency              = lv_currency
+    iv_bill_no               = lv_bill_no
+* IMPORTING
+*   /1BCDWB/FORMOUTPUT       =
+* EXCEPTIONS
+*   USAGE_ERROR              = 1
+*   SYSTEM_ERROR             = 2
+*   INTERNAL_ERROR           = 3
+*   OTHERS                   = 4
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+CALL FUNCTION 'FP_JOB_CLOSE'
+* IMPORTING
+*   E_RESULT             =
+* EXCEPTIONS
+*   USAGE_ERROR          = 1
+*   SYSTEM_ERROR         = 2
+*   INTERNAL_ERROR       = 3
+*   OTHERS               = 4
+          .
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+
+ENDMODULE.

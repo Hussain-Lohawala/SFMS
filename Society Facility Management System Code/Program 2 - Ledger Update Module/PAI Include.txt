@@ -1,0 +1,104 @@
+*&---------------------------------------------------------------------*
+*& Include          YT017MP_CREATE_LEDG_I01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9001  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9001 INPUT.
+CASE sy-ucomm.
+  WHEN 'BACK'.
+    LEAVE TO SCREEN 0.
+  WHEN 'EXIT'.
+    LEAVE PROGRAM.
+ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  GETDATA  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE getdata INPUT.
+
+  data: lv_docid type Yt017_ledger-doc_id.
+  Select SINGLE
+    doc_id
+  from Yt017_ledger
+  INTO lv_docid
+  where period = gs_input-period
+    and year_ = gs_input-year.
+
+  if lv_docid is NOT INITIAL.
+    MESSAGE 'Ledger Already Generated.' TYPE 'E'.
+  ENDIF.
+
+  Select
+    sc~assignmentid
+    sc~period
+    sc~year_
+    sc~serviceid
+    sc~consumption_Quantity
+    sm~baseprice
+    sm~currency
+    sm~gst
+  FROM Yt017_servicecon as sc
+  INNER JOIN YT017_servicemst as sm on sm~serviceid = sc~serviceid
+  into TABLE gt_srvc_con_mst
+  where sc~period = gs_input-period
+    and sc~year_ = gs_input-year.
+if sy-subrc <> 0.
+  message 'Data not found' type 'E'.
+endif.
+
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  PROCESSDATA  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE processdata INPUT.
+  data: lv_idx type sy-tabix,
+        lv_amt type p,
+        lv_docidc(10) type c,
+        lv_docidn(10) type n.
+
+  SELECT SINGLE
+    max( doc_id )
+    FROM YT017_Ledger
+    into lv_docidc.
+  if sy-subrc = 0.
+    lv_docidn = lv_docidc.
+  ENDIF.
+
+  Loop at gt_srvc_con_mst into gs_srvc_con_mst.
+
+    "Amount Without GST
+    lv_amt = gs_srvc_con_mst-baseprice * gs_srvc_con_mst-consumption.
+
+    "Amount With GST
+    gs_ledger-amount = lv_amt * ( 100 + gs_srvc_con_mst-gst ) / 100.
+
+    gs_ledger-assignmentid = gs_srvc_con_mst-assignmentid.
+    gs_ledger-currency = gs_srvc_con_mst-currency.
+    gs_ledger-period = gs_srvc_con_mst-period.
+    gs_ledger-serviceid = gs_srvc_con_mst-serviceid.
+    gs_ledger-postingdate = sy-datum.
+    gs_ledger-year_ = gs_srvc_con_mst-year.
+    gs_ledger-shkzg = 'H'.
+    lv_docidn = lv_docidn + 1.
+    gs_ledger-doc_id = lv_docidn.
+
+    modify YT017_Ledger from gs_ledger.
+    if sy-subrc <> 0.
+      MESSAGE 'Something went wrong while writing in ledger table.' type 'E'.
+    ENDIF.
+
+    clear: gs_ledger, gs_srvc_con_mst, lv_amt.
+
+  ENDLOOP.
+
+  MESSAGE 'Ledger balance calculated successfully' type 'S'.
+
+ENDMODULE.

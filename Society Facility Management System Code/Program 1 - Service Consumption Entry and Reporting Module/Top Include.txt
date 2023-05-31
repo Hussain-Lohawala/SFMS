@@ -1,0 +1,30 @@
+*&---------------------------------------------------------------------*
+*& Include YT017MP_SRVC_CONSP_TOP                   - Module Pool      YT017MP_SRVC_CONSP
+*&---------------------------------------------------------------------*
+PROGRAM YT017MP_SRVC_CONSP.
+TABLES: YT017_Servicecon.
+
+CONTROLS: TAB1 TYPE TABLEVIEW USING SCREEN 9002.
+
+TYPES: BEGIN OF TY_TABOUT,
+  AssignmentId TYPE YT017_Assignment-assignmentid,
+  ApartmentId TYPE YT017_Apartment-apartmentid,
+  Period TYPE YT017_Servicereg-period,
+  Year_ TYPE YT017_Servicereg-year_,
+  ServiceId TYPE YT017_Servicemst-serviceid,
+  Name TYPE YT017_Servicemst-name,
+  Consumption TYPE YT017_Servicecon-consumption_quantity,
+  Unit TYPE YT017_Servicemst-unit,
+  END OF TY_TABOUT.
+
+Data: rad1 type c,
+      rad2 type c.
+
+Data: gt_tabout type table of TY_TABOUT,
+      gs_tabout type TY_TABOUT.
+
+Data: gv_subscreen_num type sy-dynnr VALUE '9004'.
+
+DATA: my_container    TYPE REF TO cl_gui_custom_container,
+        my_alv_grid     TYPE REF TO cl_gui_alv_grid,
+        gt_fieldcatalog TYPE lvc_t_fcat WITH HEADER LINE.

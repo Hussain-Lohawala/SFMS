@@ -1,0 +1,63 @@
+*&---------------------------------------------------------------------*
+*& Include          YT017MP_SRVC_CONSP_I01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9001  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9001 INPUT.
+  CASE SY-UCOMM.
+    WHEN 'BACK'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  VALIDATE  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE validate INPUT.
+Data: lv_assignmentid type Yt017_assignment-assignmentid,
+      lv_period type yt017_servicecon-period,
+      lv_year type yt017_servicecon-year_.
+  Select SINGLE assignmentid
+    period
+    year_
+    FROM yt017_servicereg
+    into (lv_assignmentid, lv_period, lv_year)
+    WHERE assignmentid = yt017_servicecon-assignmentid
+    and period = yt017_servicecon-period
+    and year_ = yt017_servicecon-year_.
+ if sy-Subrc <> 0.
+   message e004(YT017_SRVC_CONSP).
+ ENDIF.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  MODIFY_INTERNAL_TABLE  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE modify_internal_table INPUT.
+if sy-ucomm = 'SAVE'.
+*    Transferring table control data into structure
+  MOVE-CORRESPONDING tab1 to gs_tabout.
+    yt017_SERVICECON-serviceid = GS_TABOUT-serviceid.
+    yt017_SERVICECON-unit = GS_TABOUT-unit.
+    yt017_servicecon-consumption_quantity = gs_tabout-consumption.
+    if sy-subrc = 0.
+    Modify YT017_SERVICECON FROM YT017_SERVICECON.
+    if sy-subrc = 0.
+      COMMIT WORK AND WAIT.
+      MESSAGE 'Data Saved Successfully for ApartmentId '(001)
+              && gs_tabout-apartmentid
+              && ' & Period ' && gs_tabout-period  type 'S'.
+    ELSE.
+       MESSAGE e006(YT017_SRVC_CONSP).
+    ENDIF.
+    ENDIF.
+  ENDIF.
+ENDMODULE.

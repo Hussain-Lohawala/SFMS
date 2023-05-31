@@ -1,0 +1,17 @@
+PROCESS BEFORE OUTPUT.
+
+*Get Data
+MODULE GetData1.
+
+*Table Control code
+ Loop at gt_tabout INTO gs_tabout WITH CONTROL tab1 CURSOR
+   tab1-current_line.
+ ENDLOOP.
+
+PROCESS AFTER INPUT.
+
+LOOP at gt_tabout.
+  MODULE  MODIFY_Internal_Table.
+   ENDLOOP.
+
+* MODULE USER_COMMAND_9002.

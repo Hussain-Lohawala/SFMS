@@ -1,0 +1,11 @@
+*&---------------------------------------------------------------------*
+*& Module Pool      YT017MP_ADOBE_INVOICE
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+
+INCLUDE YT017MP_ADOBE_INVOICE_TOP               .    " Global Data
+
+  INCLUDE YT017MP_ADOBE_INVOICE_O01               .  " PBO-Modules
+  INCLUDE YT017MP_ADOBE_INVOICE_I01               .  " PAI-Modules
+  INCLUDE YT017MP_ADOBE_INVOICE_F01               .  " FORM-Routines

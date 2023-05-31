@@ -1,0 +1,14 @@
+PROCESS BEFORE OUTPUT.
+  MODULE STATUS_9001.
+  MODULE SET_SUBSCREEN.
+  CALL SUBSCREEN SUB1
+    INCLUDING SY-CPROG gv_subscreen_num.
+
+PROCESS AFTER INPUT.
+  MODULE USER_COMMAND_9001 AT EXIT-COMMAND.
+  chain.
+  field: YT017_SERVICECON-ASSIGNMENTID,
+         yt017_servicecon-period,
+         yt017_servicecon-year_ MODULE Validate.
+  endchain.
+  Call SUBSCREEN SUB1.

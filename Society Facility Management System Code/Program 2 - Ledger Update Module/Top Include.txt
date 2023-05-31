@@ -1,0 +1,31 @@
+*&---------------------------------------------------------------------*
+*& Include YT017MP_CREATE_LEDG_TOP                  - Module Pool      YT017MP_CREATE_LEDG
+*&---------------------------------------------------------------------*
+PROGRAM YT017MP_CREATE_LEDG.
+
+TYPES: BEGIN OF Ty_INPUT,
+  Period Type YT017_ServiceCon-period,
+  Year TYPE yt017_servicecon-year_,
+  END OF ty_input,
+
+  BEGIN OF Ty_Srvc_Con_mst,
+    AssignmentId type YT017_servicecon-assignmentid,
+    Period type YT017_servicecon-period,
+    Year type Yt017_servicecon-year_,
+    Serviceid type YT017_servicecon-serviceid,
+    Consumption type YT017_servicecon-consumption_quantity,
+    baseprice TYPE yt017_servicemst-baseprice,
+    currency TYPE YT017_Servicemst-currency,
+    gst TYPE YT017_Servicemst-gst,
+  End of ty_srvc_con_mst.
+
+
+"Global Structure for Input
+Data: gs_input type Ty_input.
+
+"Structure and Internal Table of Service master-Consumption
+Data: gs_srvc_con_mst type ty_srvc_con_mst,
+      gt_srvc_con_mst TYPE TABLE OF ty_srvc_con_mst.
+
+"Structure of Ledger Table
+Data: gs_ledger type YT017_ledger.

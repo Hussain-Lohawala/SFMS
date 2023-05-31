@@ -1,0 +1,154 @@
+*&---------------------------------------------------------------------*
+*& Include          YT017MP_SRVC_CONSP_O01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*& Module STATUS_9001 OUTPUT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+MODULE status_9001 OUTPUT.
+  SET PF-STATUS '9001'.
+  SET TITLEBAR '9001'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*& Module SET_SUBSCREEN OUTPUT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+MODULE set_subscreen OUTPUT.
+
+  if rad1 = 'X'.
+    gv_subscreen_num = '9002'.
+  ELSEIF rad2 = 'X'.
+    gv_subscreen_num = '9003'.
+  endif.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*& Module GETDATA1 OUTPUT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+MODULE getdata1 OUTPUT.
+
+SELECT
+  as~assignmentid
+  as~apartmentid
+  sr~period
+  sr~year_
+  sr~serviceid
+  sm~name
+  sm~unit
+  from yt017_assignment as as
+  INNER JOIN YT017_servicereg as sr on sr~assignmentid = as~assignmentid
+  INNER JOIN YT017_servicemst as sm on sm~serviceid = sr~serviceid
+  into CORRESPONDING FIELDS OF TABLE gt_tabout
+  where as~assignmentid = yt017_servicecon-assignmentid
+  and sr~period = yt017_servicecon-period
+  and sr~year_ = yt017_servicecon-year_
+  and sr~isactive = 'X'.
+
+if sy-subrc <> 0.
+  MESSAGE e000(YT017_SRVC_CONSP).
+endif.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*& Module MOVE OUTPUT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+MODULE move OUTPUT.
+* SET PF-STATUS 'xxxxxxxx'.
+* SET TITLEBAR 'xxx'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  DISPLAY_REPORT  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE display_report OUTPUT.
+
+  clear: gt_tabout, gs_tabout.
+
+  SELECT
+  as~assignmentid
+  as~apartmentid
+  sr~period
+  sr~year_
+  sr~serviceid
+  sm~name
+  sc~consumption_quantity
+  sm~unit
+  from yt017_assignment as as
+  INNER JOIN YT017_servicereg as sr on sr~assignmentid = as~assignmentid
+  INNER JOIN YT017_servicemst as sm on sm~serviceid = sr~serviceid
+  INNER JOIN YT017_SERVICECON AS SC ON SC~assignmentid = as~assignmentid
+    and sc~period = sr~period
+    and sc~year_ = sr~year_
+    and sc~serviceid = sm~serviceid
+  into TABLE gt_tabout
+  where as~assignmentid = yt017_servicecon-assignmentid
+  and sr~period = yt017_servicecon-period
+  and sr~year_ = yt017_servicecon-year_.
+
+  if sy-subrc <> 0.
+    MESSAGE e001(YT017_SRVC_CONSP).
+  endif.
+
+  gt_fieldcatalog-fieldname = 'ASSIGNMENTID'.
+  gt_fieldcatalog-reptext = 'ASSIGNMENTID'.
+  APPEND gt_fieldcatalog.
+
+  gt_fieldcatalog-fieldname = 'APARTMENTID'.
+  gt_fieldcatalog-reptext = 'APARTMENTID'.
+  APPEND gt_fieldcatalog.
+
+  gt_fieldcatalog-fieldname = 'PERIOD'.
+  gt_fieldcatalog-reptext = 'PERIOD'.
+  APPEND gt_fieldcatalog.
+
+  gt_fieldcatalog-fieldname = 'YEAR_'.
+  gt_fieldcatalog-reptext = 'YEAR'.
+  APPEND gt_fieldcatalog.
+
+  gt_fieldcatalog-fieldname = 'SERVICEID'.
+  gt_fieldcatalog-reptext = 'SERVICEID'.
+  APPEND gt_fieldcatalog.
+
+  gt_fieldcatalog-fieldname = 'NAME'.
+  gt_fieldcatalog-reptext = 'SERVICE NAME'.
+  APPEND gt_fieldcatalog.
+
+  gt_fieldcatalog-fieldname = 'CONSUMPTION'.
+  gt_fieldcatalog-reptext = 'CONSUMPTION QUANTITY'.
+  APPEND gt_fieldcatalog.
+
+  gt_fieldcatalog-fieldname = 'UNIT'.
+  gt_fieldcatalog-reptext = 'UNIT'.
+  APPEND gt_fieldcatalog.
+
+
+  CREATE OBJECT my_container
+    EXPORTING
+      container_name = 'CONT1'
+    EXCEPTIONS
+      OTHERS         = 1.
+  IF  sy-subrc <> 0.
+    MESSAGE e002(YT017_SRVC_CONSP).
+  ENDIF.
+
+  CREATE OBJECT my_alv_grid
+    EXPORTING
+      i_parent = my_container
+    EXCEPTIONS
+      OTHERS   = 1.
+  IF sy-subrc <> 0.
+    MESSAGE e003(YT017_SRVC_CONSP).
+  ENDIF.
+
+  CALL METHOD my_alv_grid->set_table_for_first_display
+    CHANGING
+      it_outtab       = gt_TABOUT
+      it_fieldcatalog = gt_fieldcatalog[].
+ENDMODULE.
